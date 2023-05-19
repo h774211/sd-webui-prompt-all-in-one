@@ -10,22 +10,19 @@ import time
 caches = {}
 
 def translate_google(text, from_lang, to_lang, api_config):
-    url = 'https://translation.googleapis.com/language/translate/v2/'
-    api_key = api_config.get('api_key', '')
-    if not api_key:
-        raise Exception("api_key is required")
+    url = 'https://translate.googleapis.com/translate_a/single'
     params = {
-        'key': api_key,
-        'q': text,
-        'source': from_lang,
-        'target': to_lang,
-        'format': 'text'
+        'client': 'gtx',
+        'dt': 't',
+        'sl': from_lang,
+        'tl': to_lang,
+        'q': text
     }
     response = requests.get(url, params=params, timeout=10)
     result = response.json()
     if 'error' in result:
         raise Exception(result['error']['message'])
-    return result['data']['translations'][0]['translatedText']
+    return result[0][0][0]
 
 def translate_openai(text, from_lang, to_lang, api_config):
     import openai
