@@ -9,7 +9,7 @@
                             <optgroup v-for="typeGroup in supportApi" :key="typeGroup.type"
                                       :label="getLang(typeGroup.type)">
                                 <option v-for="item in typeGroup.children" :key="item.key" :value="item.key">
-                                    {{ item.name }}
+                                    {{ item.name }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--&nbsp;QPS: {{ item.concurrent || 1 }}
                                 </option>
                             </optgroup>
                         </select>
@@ -18,7 +18,7 @@
                 <div class="setting-line" v-if="apiItem && apiItem.type == 'translators'">
                     <div class="line-title"></div>
                     <div class="line-content">
-                        <span style="color: var(--red5)">*{{ getLang('not_api_key_desc') }}</span>
+                        <span class="common-red">*{{ getLang('not_api_key_desc') }}</span>
                     </div>
                 </div>
                 <div class="setting-line" v-if="apiItem.help">
@@ -32,7 +32,7 @@
                 <div class="setting-line" v-for="config in configs">
                     <div class="line-title">{{ config.title }}</div>
                     <div class="line-content">
-                        <input v-if="config.type == 'input'" v-model="config.value">
+                        <input type="text" v-if="config.type == 'input'" v-model="config.value">
                         <select v-if="config.type == 'select'" v-model="config.value">
                             <option v-for="option in config.options" :value="option">{{ option }}</option>
                         </select>
@@ -64,6 +64,7 @@
                     <div class="line-title">TagComplete</div>
                     <div class="line-content">
                         <div v-html="getLang('tagcomplete_translate_desc')"></div>
+                        <div class="common-red" v-html="getLang('tagcomplete_translate_desc2')"></div>
                         <div class="line-row">
                             <select v-model="tagCompleteFileKey" @change="tagCompleteResults = []">
                                 <option v-for="item in tagCompleteFiles" :value="item.key">{{ item.name }}</option>
@@ -73,13 +74,17 @@
                                 <icon-svg v-else name="refresh" />
                             </div>
                         </div>
+                        <label class="onlyCsvOnAuto" :style="{display: tagCompleteFileKey ? 'flex': 'none'}">
+                            <input class="hover-scale-120" type="checkbox" value="1" v-model="onlyCsvOnAutoValue">
+                            <span>{{ getLang('only_csv_on_auto') }}</span>
+                        </label>
                     </div>
                 </div>
                  <div class="setting-line" v-show="tagCompleteFileKey">
                     <div class="line-title"></div>
                     <div class="line-content">
                         <div class="hover-scale-120 test-btn" @click="onTagCompleteTestClick">{{ getLang('test') }}</div>
-                        <div v-show="tagCompleteResults.length > 0">
+                        <div ref="tagCompleteResults" v-show="tagCompleteResults.length > 0">
                             <p v-for="text in tagCompleteResults" :key="text">{{ text }}</p>
                         </div>
                     </div>
@@ -121,6 +126,7 @@ Github: Physton/sd-webui-prompt-all-in-one`,
             tagCompleteFilesLoading: false,
             tagCompleteFileKey: '',
             tagCompleteResults: [],
+            onlyCsvOnAutoValue: false,
         }
     },
     computed: {
@@ -142,7 +148,7 @@ Github: Physton/sd-webui-prompt-all-in-one`,
         this.translatedText = ''
         this.loading = false
     },
-    emits: ['update:translateApi', 'forceUpdate:translateApi', 'update:tagCompleteFile'],
+    emits: ['update:translateApi', 'forceUpdate:translateApi', 'update:tagCompleteFile', 'update:onlyCsvOnAuto'],
     watch: {
         apiKey: {
             handler: function (val, oldVal) {
@@ -177,6 +183,7 @@ Github: Physton/sd-webui-prompt-all-in-one`,
             this.translatedText = ''
             this.loading = false
             this.tagCompleteFileKey = this.tagCompleteFile
+            this.onlyCsvOnAutoValue = this.onlyCsvOnAuto
             this.refreshCSVs()
         },
         refreshCSVs() {
@@ -223,6 +230,39 @@ Github: Physton/sd-webui-prompt-all-in-one`,
                 this.loading = false
             })
         },
+        translate(text, from_lang, to_lang, translateApi = null, translateApiConfig = null) {
+            return new Promise(async (resolve, reject) => {
+                translateApi = translateApi || this.translateApi
+                translateApiConfig = translateApiConfig || this.translateApiConfig || {}
+
+                if (translateApi === 'openai') {
+                    text = JSON.stringify({text})
+                }
+                this.gradioAPI.translate(text, from_lang, to_lang, translateApi, translateApiConfig).then(res => {
+                    if (res.success) {
+                        if (translateApi === 'openai') {
+                            let translated_text = res.translated_text
+                            // 找到第一个[，截取到最后一个]，然后再转成json
+                            const start = translated_text.indexOf('{')
+                            const end = translated_text.lastIndexOf('}')
+                            translated_text = translated_text.substring(start, end + 1)
+                            try {
+                                translated_text = JSON.parse(translated_text).text
+                                res.translated_text = translated_text
+                            } catch (e) {
+                                reject(e)
+                                return
+                            }
+                        }
+                        resolve(res)
+                    } else {
+                        reject(res)
+                    }
+                }).catch(error => {
+                    reject(error)
+                })
+            })
+        },
         onSaveClick() {
             this.isOpen = false
             let configs = {}
@@ -231,6 +271,7 @@ Github: Physton/sd-webui-prompt-all-in-one`,
             }
             this.$emit('update:translateApi', this.apiKey)
             this.$emit('update:tagCompleteFile', this.tagCompleteFileKey)
+            this.$emit('update:onlyCsvOnAuto', this.onlyCsvOnAutoValue)
             this.gradioAPI.setData('translate_api.' + this.apiKey, configs).then(res => {
                 if (this.apiKey === this.translateApi) this.$emit('forceUpdate:translateApi')
             })
@@ -245,6 +286,10 @@ Github: Physton/sd-webui-prompt-all-in-one`,
                 let lang = this.getLang('translate_result')
                 this.translateToLocalByCSV(text, this.tagCompleteFileKey, true).then(res => {
                     this.tagCompleteResults.push(lang.replace('{0}', text).replace('{1}', res))
+                    /*this.$refs.tagCompleteResults.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'buttom'
+                    })*/
                 }).catch(err => {
                     this.$toastr.error(err)
                 })

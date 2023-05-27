@@ -18,21 +18,21 @@ Thank you very much for your love and support. I have received your kindness.
 | 2023-05-19          | 一**             | 支持，好东西                         | ￥1            |
 | 2023-05-19          | M**             | 大佬🐮🍺                         | ￥5            |
 | 2023-05-19          | 红**             | 感谢作者，非常贴心的工具！                  | ￥20           |
+| 2023-05-20          | ?unknown        | 加油，还有谢谢                        | ￥5            |
+| 2023-05-24          | 覃**             | 秒薄之力，支持一下。                     | ￥50           |
+| 2023-05-24          | 常**             | all in one 真好用！                | ￥20           |
+| 2023-05-24          | m**             | 开发出这么好的插件，作者，辛苦了！              | ￥1            |
+| 2023-05-24          | T**             |                                | ￥5            |
+| 2023-05-25          | M**             | 谢谢你的辛苦付出，加油！                   | ￥9.9          |
 
 ## Buy me a coffee / *请我喝杯咖啡*
 
-#### BTC-Bitcoin `3LdXwHkkVsspQzgowdy3pymwty9LiFBHda`
+- ko-fi：[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/physton)
+- Paypal: [https://paypal.me/physton](https://paypal.me/physton)
 
-#### ETH-Ethereum `3DbapbGRQdbrDqBazBPYWfyKjbM5uN2SDy`
 
-#### USDT-ERC20 `0xb8b7a067c5639e7befb9665be9bd00a4c75b6614`
+- 爱发电：[https://afdian.net/a/physton](https://afdian.net/a/physton)
+- 支付宝 `physton@163.com`
+- 微信赞赏
 
-#### USDT-TRC20 `TWtnKQgSTpHu1eiQGrppSniGyzYtggZYFf`
-
-#### Paypal `physton@163.com`
-
-#### Alipay / 支付宝 `physton@163.com`
-
-#### Wechat / 微信赞赏
-
-![](https://raw.githubusercontent.com/Physton/sd-webui-prompt-all-in-one-assets/main/images/donate-wechat.jpg)
+    ![](https://raw.githubusercontent.com/Physton/sd-webui-prompt-all-in-one-assets/main/images/donate-wechat.jpg)

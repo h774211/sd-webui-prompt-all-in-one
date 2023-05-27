@@ -3,7 +3,7 @@
         <div :class="['prompt-main', hidePanel ? 'fold': '']" @click="onPromptMainClick">
             <div class="prompt-header">
                 <div class="prompt-unfold" @click="onUnfoldClick">
-                    <icon-svg class="hover-scale-120" name="unfold" />
+                    <icon-svg class="hover-scale-120" name="unfold"/>
                 </div>
                 <div class="prompt-header-title">{{ neg ? getLang('negative_prompt') : getLang('prompt') }}</div>
                 <div class="prompt-header-counter" v-show="counterText">({{ counterText }})</div>
@@ -12,7 +12,7 @@
                         <div class="extend-btn-group">
                             <div class="extend-btn-item" v-tooltip="'Language: ' + langName"
                                  @click="$emit('click:selectLanguage', $event)">
-                                <icon-svg class="hover-scale-120" name="i18n" />
+                                <icon-svg class="hover-scale-120" name="i18n"/>
                             </div>
                             <div class="extend-btn-item">
                                 <icon-svg class="hover-scale-120" name="setting" v-tooltip="getLang('setting_desc')"/>
@@ -23,34 +23,55 @@
                                         <icon-svg class="hover-scale-120" name="api"/>
                                     </div>
                                     <div class="extend-btn-item"
+                                         v-tooltip="getLang('prompt_format')"
+                                         @click="$emit('click:promptFormat', $event)">
+                                        <icon-svg class="hover-scale-120" name="format"/>
+                                    </div>
+                                    <div class="extend-btn-item"
                                          v-tooltip="getLang('theme_extension')"
                                          @click="$emit('click:selectTheme', $event)">
                                         <icon-svg class="hover-scale-120" name="theme"/>
                                     </div>
-                                    <div class="gradio-checkbox hover-scale-120" v-show="!isEnglish">
-                                        <label v-tooltip="getLang('auto_translate_to_local_language')">
-                                            <input type="checkbox" name="auto_translate_to_local_language" value="1"
-                                                   :checked="autoTranslateToLocal"
-                                                   @change="$emit('update:autoTranslateToLocal', $event.target.checked)">
-                                            <icon-svg name="translate"/>
-                                        </label>
-                                    </div>
-                                    <div class="gradio-checkbox hover-scale-120" v-show="!isEnglish">
-                                        <label v-tooltip="getLang('auto_translate_to_english')">
-                                            <input type="checkbox" name="auto_translate_to_english" value="1"
-                                                   :checked="autoTranslateToEnglish"
-                                                   @change="$emit('update:autoTranslateToEnglish', $event.target.checked)">
-                                            <icon-svg name="english"/>
-                                        </label>
-                                    </div>
-                                    <div class="gradio-checkbox hover-scale-120">
+                                    <template v-if="!isEnglish">
+                                        <template v-if="canOneTranslate">
+                                            <div class="gradio-checkbox hover-scale-120">
+                                                <label v-tooltip="getLang('auto_translate')">
+                                                    <input type="checkbox" name="auto_translate"
+                                                           value="1"
+                                                           :checked="autoTranslate"
+                                                           @change="$emit('update:autoTranslate', $event.target.checked)">
+                                                    <icon-svg name="translate"/>
+                                                </label>
+                                            </div>
+                                        </template>
+                                        <template v-else>
+                                            <div class="gradio-checkbox hover-scale-120">
+                                                <label v-tooltip="getLang('auto_translate_to_local_language')">
+                                                    <input type="checkbox" name="auto_translate_to_local_language"
+                                                           value="1"
+                                                           :checked="autoTranslateToLocal"
+                                                           @change="$emit('update:autoTranslateToLocal', $event.target.checked)">
+                                                    <icon-svg name="translate"/>
+                                                </label>
+                                            </div>
+                                            <div class="gradio-checkbox hover-scale-120">
+                                                <label v-tooltip="getLang('auto_translate_to_english')">
+                                                    <input type="checkbox" name="auto_translate_to_english" value="1"
+                                                           :checked="autoTranslateToEnglish"
+                                                           @change="$emit('update:autoTranslateToEnglish', $event.target.checked)">
+                                                    <icon-svg name="english"/>
+                                                </label>
+                                            </div>
+                                        </template>
+                                    </template>
+                                    <!--<div class="gradio-checkbox hover-scale-120">
                                         <label v-tooltip="getLang('is_remove_space')">
                                             <input type="checkbox" name="auto_remove_space" value="1"
                                                    :checked="autoRemoveSpace"
                                                    @change="$emit('update:autoRemoveSpace', $event.target.checked)">
                                             <icon-svg name="remove-space"/>
                                         </label>
-                                    </div>
+                                    </div>-->
                                     <div class="gradio-checkbox hover-scale-120">
                                         <label v-tooltip="getLang('whether_to_enable_tooltip')">
                                             <input type="checkbox" name="enable_tooltip" value="1"
@@ -79,22 +100,34 @@
                         </div>
                     </div>
                 </div>
-                <div class="prompt-header-extend" v-show="!isEnglish">
-                    <div class="extend-content">
-                        <div class="extend-btn-group">
-                            <div class="extend-btn-item" v-tooltip="getLang('translate_keywords_to_local_language')"
+                <template v-if="!isEnglish">
+                    <div class="prompt-header-extend">
+                        <div class="extend-content">
+                            <div class="extend-btn-group">
+                                <template v-if="canOneTranslate">
+                                    <div class="extend-btn-item"
+                                         v-tooltip="getLang('one_translate_all_keywords')"
+                                         @click="onTranslatesToLocalClick">
+                                        <icon-svg v-if="!loading['all_local']" class="hover-scale-120" name="translate"/>
+                                        <icon-svg v-if="loading['all_local']" class="hover-scale-120" name="loading"/>
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <div class="extend-btn-item" v-tooltip="getLang('translate_keywords_to_local_language')"
                                  @click="onTranslatesToLocalClick">
-                                <icon-svg v-if="!loading['all_local']" class="hover-scale-120" name="translate"/>
-                                <icon-svg v-if="loading['all_local']" class="hover-scale-120" name="loading"/>
-                            </div>
-                            <div class="extend-btn-item" v-tooltip="getLang('translate_all_keywords_to_english')"
-                                 @click="onTranslatesToEnglishClick">
-                                <icon-svg v-if="!loading['all_en']" class="hover-scale-120" name="english"/>
-                                <icon-svg v-if="loading['all_en']" class="hover-scale-120" name="loading"/>
+                                        <icon-svg v-if="!loading['all_local']" class="hover-scale-120" name="translate"/>
+                                        <icon-svg v-if="loading['all_local']" class="hover-scale-120" name="loading"/>
+                                    </div>
+                                    <div class="extend-btn-item" v-tooltip="getLang('translate_all_keywords_to_english')"
+                                         @click="onTranslatesToEnglishClick">
+                                        <icon-svg v-if="!loading['all_en']" class="hover-scale-120" name="english"/>
+                                        <icon-svg v-if="loading['all_en']" class="hover-scale-120" name="loading"/>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </div>
-                </div>
+                </template>
                 <div class="prompt-header-extend">
                     <div class="extend-content">
                         <div class="extend-btn-group">
@@ -125,13 +158,13 @@
                                 <icon-svg name="input"/>
                             </label>
                         </div>
-                        <input type="text" class="scroll-hide svelte-4xt1ch input-tag-append" ref="promptTagAppend"
-                               :placeholder="getLang('please_enter_new_keyword')"
-                               v-tooltip="getLang('enter_to_add')"
-                               @focus="onAppendTagFocus"
-                               @blur="onAppendTagBlur"
-                               @keyup="onAppendTagKeyUp"
-                               @keydown="onAppendTagKeyDown">
+                        <textarea type="text" class="scroll-hide svelte-4xt1ch input-tag-append" ref="promptTagAppend"
+                                  :placeholder="getLang('please_enter_new_keyword')"
+                                  v-tooltip="getLang('enter_to_add')"
+                                  @focus="onAppendTagFocus"
+                                  @blur="onAppendTagBlur"
+                                  @keyup="onAppendTagKeyUp"
+                                  @keydown="onAppendTagKeyDown"></textarea>
 
                         <div class="prompt-append-list" ref="promptAppendList" v-show="showAppendList"
                              :style="appendListStyle">
@@ -139,8 +172,8 @@
                                  :class="['prompt-append-group', appendListSelected === index ? 'selected' : '']">
                                 <div class="append-group-name" @click="onAppendGroupClick(index, null, $event)">
                                     <icon-svg class="name-icon" v-if="item.icon === 'wrap'" name="wrap"/>
-                                    <icon-svg class="name-icon" v-else-if="item.icon === 'history'" name="history" />
-                                    <icon-svg class="name-icon" v-else-if="item.icon === 'favorite'" name="favorite" />
+                                    <icon-svg class="name-icon" v-else-if="item.icon === 'history'" name="history"/>
+                                    <icon-svg class="name-icon" v-else-if="item.icon === 'favorite'" name="favorite"/>
                                     {{ appendListItemName(item) }}
                                     <span class="arrow-right" v-show="item.children.length > 0"></span>
                                 </div>
@@ -178,12 +211,13 @@
             <div :class="['prompt-tags', dropTag ? 'droping': '']" ref="promptTags">
                 <div class="prompt-tags-list" ref="promptTagsList">
                     <template v-for="(tag, index) in tags" :key="tag.id" :data-id="tag.id">
-                        <div :class="['prompt-tag', tag.disabled ? 'disabled': '']">
-                            <div class="prompt-tag-main">
+                        <div :class="['prompt-tag', tag.disabled ? 'disabled': '', tag.type === 'wrap' ? 'wrap-tag' : '']"
+                             :ref="'promptTag-' + tag.id">
+                            <div class="prompt-tag-main" @mouseenter="onTagMouseEnter(index)">
                                 <div class="prompt-tag-edit">
                                     <template v-if="tag.type === 'wrap'">
                                         <div class="prompt-tag-value"
-                                             :ref="'promptTag-' + tag.id"
+                                             :ref="'promptTagValue-' + tag.id"
                                              v-tooltip="getLang('line_break_character') + '<br/>' + getLang('drop_to_order')"
                                              style="width: 100%">
                                             <icon-svg name="wrap"/>
@@ -195,17 +229,18 @@
                                     </template>-->
                                     <template v-else>
                                         <div v-show="!editing[tag.id]"
-                                             class="prompt-tag-value"
-                                             :style="{color: tag.isLora ? 'var(--geekblue-8)' : this.tagColor}"
-                                             :ref="'promptTag-' + tag.id"
-                                             v-tooltip="getLang('click_to_edit') + '<br/>' + getLang('drop_to_order')"
-                                             @click="onTagClick(index)" v-html="renderTag(index)">
+                                             :class="tag.classes"
+                                             :ref="'promptTagValue-' + tag.id"
+                                             v-tooltip="getLang('click_to_edit') + '<br/>' + getLang('dblclick_to_disable') + '<br/>' + getLang('drop_to_order')"
+                                             @click="onTagClick(index, $event)" @dblclick="onTagDblclick(index)" v-html="renderTag(index)">
                                         </div>
                                         <textarea v-show="editing[tag.id]" type="text"
-                                               class="scroll-hide svelte-4xt1ch input-tag-edit"
-                                               :ref="'promptTagEdit-' + tag.id" :placeholder="getLang('enter_to_save')"
-                                               :value="tag.value" @blur="onTagInputBlur(index)"
-                                               @keydown="onTagInputKeyDown(index, $event)"
+                                                  class="scroll-hide svelte-4xt1ch input-tag-edit"
+                                                  :ref="'promptTagEdit-' + tag.id"
+                                                  :placeholder="getLang('enter_to_save')"
+                                                  :value="tag.value"
+                                                  @blur="onTagInputBlur(index)"
+                                                  @keydown="onTagInputKeyDown(index, $event)"
                                                   @change="onTagInputChange(index, $event)"></textarea>
                                         <!--<input v-show="editing[tag.id]" type="text"
                                                class="scroll-hide svelte-4xt1ch input-tag-edit"
@@ -214,7 +249,8 @@
                                                @keydown="onTagInputKeyDown(index, $event)"
                                                @change="onTagInputChange(index, $event)">-->
                                     </template>
-                                    <div class="btn-tag-delete" @click="onDeleteTagClick(index)">
+                                    <div class="btn-tag-delete" :ref="'promptTagDelete-' + tag.id"
+                                         @click="onDeleteTagClick(index)">
                                         <icon-svg name="close"/>
                                     </div>
                                 </div>
@@ -224,7 +260,7 @@
                                                       @update:model-value="onTagWeightNumChange(index, $event)"></vue-number-input>
                                     <button type="button" v-tooltip="getLang('increase_weight_add_parentheses')"
                                             @click="onIncWeightClick(index, +1)">
-                                        <icon-svg name="weight-parentheses-inc" />
+                                        <icon-svg name="weight-parentheses-inc"/>
                                     </button>
                                     <button type="button" v-tooltip="getLang('increase_weight_subtract_parentheses')"
                                             @click="onIncWeightClick(index, -1)">
@@ -238,9 +274,14 @@
                                             @click="onDecWeightClick(index, -1)">
                                         <icon-svg name="weight-brackets-dec"/>
                                     </button>
+                                    <button type="button"
+                                            v-tooltip="getLang('line_break_character')"
+                                            @click="onWrapTagClick(index)">
+                                        <icon-svg name="wrap"/>
+                                    </button>
                                     <button type="button" v-tooltip="getLang('translate_keyword_to_english')"
                                             v-show="!isEnglish"
-                                            @click="onTranslateToEnglishClick(index).then(() => updateTags())">
+                                            @click="onTranslateToEnglishClick(index)">
                                         <icon-svg v-if="!loading[tag.id + '_en']" name="english"/>
                                         <icon-svg v-if="loading[tag.id + '_en']" name="loading"/>
                                     </button>
@@ -248,7 +289,14 @@
                                             @click="copy(tag.value)">
                                         <icon-svg name="copy"/>
                                     </button>
-                                    <button type="button" v-tooltip="getLang(tag.disabled ? 'enable_keyword': 'disable_keyword')"
+                                    <button type="button"
+                                            v-tooltip="getLang(tag.isFavorite ? 'remove_from_favorite': 'add_to_favorite')"
+                                            @click="onFavoriteTagClick(index)">
+                                        <icon-svg v-if="tag.isFavorite" name="favorite-yes"/>
+                                        <icon-svg v-if="!tag.isFavorite" name="favorite-no"/>
+                                    </button>
+                                    <button type="button"
+                                            v-tooltip="getLang(tag.disabled ? 'enable_keyword': 'disable_keyword')"
                                             @click="onDisabledTagClick(index)">
                                         <icon-svg v-if="!tag.disabled" name="disabled"/>
                                         <icon-svg v-if="tag.disabled" name="enable"/>
@@ -259,14 +307,14 @@
                                  v-show="!isEnglish && (tag.type === 'text' || !tag.type)">
                                 <div class="translate-to-local hover-scale-120"
                                      v-tooltip="getLang('translate_keyword_to_local_language')"
-                                     @click="onTranslateToLocalClick(index).then(() => updateTags())">
+                                     @click="onTranslateToLocalClick(index)">
                                     <icon-svg v-if="!loading[tag.id + '_local']" name="translate"/>
                                     <icon-svg v-if="loading[tag.id + '_local']" name="loading"/>
                                 </div>
                                 <div class="local-language">{{ tag.localValue }}</div>
                             </div>
                         </div>
-                        <!--<div class="prompt-wrap" v-show="tag.type === 'wrap'"></div>-->
+                        <div :class="['prompt-wrap', tag.type === 'wrap' ? 'wrap-tag' : '']" ref="promptTagWrap"></div>
                     </template>
                 </div>
                 <!--<div class="prompt-append">
@@ -312,6 +360,14 @@ export default {
             type: Object,
             required: true,
         },
+        canOneTranslate: {
+            type: Boolean,
+            default: false,
+        },
+        autoTranslate: {
+            type: Boolean,
+            default: false,
+        },
         autoTranslateToEnglish: {
             type: Boolean,
             default: false,
@@ -321,6 +377,14 @@ export default {
             default: false,
         },
         autoRemoveSpace: {
+            type: Boolean,
+            default: false,
+        },
+        autoRemoveLastComma: {
+            type: Boolean,
+            default: false,
+        },
+        autoKeepWeightZero: {
             type: Boolean,
             default: false,
         },
@@ -344,8 +408,24 @@ export default {
             type: String,
             default: '',
         },
+        extraNetworks: {
+            type: Array,
+            default: () => [],
+        },
+        loras: {
+            type: Array,
+            default: () => [],
+        },
+        lycos: {
+            type: Array,
+            default: () => [],
+        },
+        embeddings: {
+            type: Array,
+            default: () => [],
+        },
     },
-    emits: ['update:languageCode', 'update:autoTranslateToEnglish', 'update:autoTranslateToLocal', 'update:autoRemoveSpace', 'update:hideDefaultInput', 'update:hidePanel', 'update:enableTooltip', 'update:translateApi', 'click:translateApi', 'click:selectTheme', 'click:selectLanguage', 'click:showHistory', 'click:showFavorite'],
+    emits: ['update:languageCode', 'update:autoTranslate', 'update:autoTranslateToEnglish', 'update:autoTranslateToLocal', 'update:autoRemoveSpace', 'update:autoRemoveLastComma', 'update:autoKeepWeightZero', 'update:hideDefaultInput', 'update:hidePanel', 'update:enableTooltip', 'update:translateApi', 'click:translateApi', 'click:promptFormat', 'click:selectTheme', 'click:selectLanguage', 'click:showHistory', 'click:showFavorite', 'refreshFavorites'],
     data() {
         return {
             prompt: '',
@@ -386,8 +466,8 @@ export default {
             dropTag: false,
             loading: {},
             editing: {},
-            tagColor: '',
             autocompleteResults: null,
+            tagClickTimeId: 0,
         }
     },
     computed: {
@@ -482,18 +562,38 @@ export default {
         })
         window.addEventListener('resize', this.onResize)
     },
-    watch: {},
+    watch: {
+        loras: {
+            handler() {
+                this.tags.forEach((tag) => {
+                    this._setTagClass(tag)
+                })
+            },
+            immediate: false,
+        },
+        lycos: {
+            handler() {
+                this.tags.forEach((tag) => {
+                    this._setTagClass(tag)
+                })
+            },
+            immediate: false,
+        },
+        embeddings: {
+            handler() {
+                this.tags.forEach((tag) => {
+                    this._setTagClass(tag)
+                })
+            },
+            immediate: false,
+        },
+    },
     methods: {
         init() {
-            if (this.neg) {
-                this.tagColor = 'var(--magenta-9)'
-            } else {
-                this.tagColor = 'var(--green-9)'
-            }
             this.tags = []
             this.onTextareaChange()
-            this.textarea.removeEventListener('change', this.onTextareaChange)
-            this.textarea.addEventListener('change', this.onTextareaChange)
+            // this.textarea.removeEventListener('change', this.onTextareaChange)
+            // this.textarea.addEventListener('change', this.onTextareaChange)
         },
         async onTextareaChange(event) {
             const autocompleteResults = this.textarea.parentElement.getElementsByClassName('autocompleteResults')
@@ -506,10 +606,12 @@ export default {
             let indexes = []
             let oldTags = this.tags
             this.tags = []
-            tags.forEach(tag => {
+            for (let index in tags) {
+                let tag = tags[index]
                 if (tag === "\n") {
                     this._appendTag("\n", "\n", false, -1, 'wrap')
                 } else {
+                    // if (tag.indexOf('Negative prompt:') === 0) break
                     let find = false
                     for (let item of oldTags) {
                         if (item.value === tag) {
@@ -520,74 +622,28 @@ export default {
                     const localValue = find ? find.localValue : ''
                     const disabled = find ? find.disabled : false
                     const index = this._appendTag(tag, localValue, disabled, -1, 'text')
-                    if (!find || find.localValue === '') indexes.push(index)
+                    if (!find) indexes.push(index)
                 }
-            })
-            if (event && this.autoTranslateToLocal) {
-                // 如果开启了自动翻译到本地语言，那么就自动翻译
-                /*for (const index of indexes) {
-                    try {
-                        await this.onTranslateToLocalClick(index)
-                    } catch (error) {
-                    }
-                }*/
-                this.updateTags()
+            }
+            if (this.autoTranslateToLocal && event) {
+                // 启动了自动翻译到本地语言，并且用户手动触发的
+                let useNetwork = !(this.tagCompleteFile && this.onlyCsvOnAuto)
+                useNetwork = false // 浪费网络请求，先关闭网络翻译。
+                this.translates(indexes, true, useNetwork).finally(() => {
+                    this.updateTags()
+                })
             } else {
                 this.updateTags()
             }
-            return
-            /*let newTags = []
-            let newTagsIndex = []
-            let delTags = []
-            tags.forEach((tag, index) => {
-                let find = false
-                for (let i = 0; i < this.tags.length; i++) {
-                    if (this.tags[i].value === tag) {
-                        find = true
-                        break
-                    }
-                }
-                if (!find) {
-                    newTags.push(tag)
-                    newTagsIndex.push(index)
-                }
-            })
-            this.tags.forEach((tag, index) => {
-                let find = false
-                for (let i = 0; i < tags.length; i++) {
-                    if (tags[i] === tag.value) {
-                        find = true
-                        break
-                    }
-                }
-                if (!find) delTags.push(index)
-            })
-            if (delTags.length <= 0 && newTags.length <= 0) return
-            // console.log(newTags, delTags);
-            for (let i = delTags.length - 1; i >= 0; i--) {
-                this.tags.splice(delTags[i], 1)
-            }
-            let indexes = []
-            for (let i = 0; i < newTags.length; i++) {
-                // indexes.push(this._appendTag(newTags[i]))
-                if (newTags[i] === "\n") {
-                    indexes.push(this._appendTag("\n", "\n", false, newTagsIndex[i], 'wrap'))
-                } else {
-                    indexes.push(this._appendTag(newTags[i], '', false, newTagsIndex[i], 'text'))
-                }
-            }
-            if (event && this.autoTranslateToLocal) {
-                // 如果开启了自动翻译到本地语言，那么就自动翻译
-                /!*for (const index of indexes) {
-                    try {
-                        await this.onTranslateToLocalClick(index)
-                    } catch (error) {
-                    }
-                }*!/
-                this.updateTags()
-            } else {
-                this.updateTags()
-            }*/
+        },
+        _setTextareaFocus() {
+            if (typeof get_uiCurrentTabContent !== 'function') return
+            if (typeof activePromptTextarea !== 'object') return
+            const currentTab = get_uiCurrentTabContent()
+            if (!currentTab) return
+            let tabName = currentTab.id.replace('tab_', '')
+            if (!tabName) return
+            activePromptTextarea[tabName] = this.textarea
         },
         copy(text) {
             this.$copyText(text).then(() => {
@@ -612,6 +668,7 @@ export default {
         },
         genPrompt() {
             let prompts = []
+            let length = this.tags.length
             this.tags.forEach((tag, index) => {
                 let prompt = ''
                 if (typeof tag['type'] === 'string' && tag.type === 'wrap') {
@@ -661,6 +718,11 @@ export default {
                         }
                     }
 
+                    if (this.autoRemoveLastComma && index + 1 === length) {
+                        // 如果是最后一个，那么就不需要加逗号
+                        splitSymbol = ''
+                    }
+
                     prompt = tag.value + splitSymbol
                 }
 
@@ -670,17 +732,24 @@ export default {
             // console.log('update tags', prompts)
             return prompts.join('')
         },
-        updateTags() {
-            console.log('tags change', this.tags)
+        updatePrompt() {
             this.prompt = this.genPrompt()
             this.textarea.value = this.prompt
             common.hideCompleteResults(this.textarea)
+            if (typeof updateInput === "function") {
+                updateInput(this.textarea)
+            } else {
+                this.textarea.dispatchEvent(new Event('input'))
+            }
+        },
+        updateTags() {
+            console.log('tags change', this.tags)
+            this.updatePrompt()
             const steps = this.steps.querySelector('input[type="number"]').value
             this.gradioAPI.tokenCounter(this.textarea.value, steps).then(res => {
                 const {token_count, max_length} = res
                 this.counterText = `${token_count}/${max_length}`
             })
-            this.textarea.dispatchEvent(new Event('input'))
             if (this.tags.length) {
                 this.gradioAPI.getLatestHistory(this.historyKey).then(res => {
                     if (res && res.prompt === this.prompt) {
@@ -696,6 +765,69 @@ export default {
                 }).catch(err => {
                 })
             }
+        },
+        _setTagClass(tag) {
+            tag.isLora = false
+            tag.loraExists = false
+            tag.isLyco = false
+            tag.lycoExists = false
+            tag.isEmbedding = false
+
+            if (typeof tag['type'] === 'string' && tag.type === 'wrap') {
+            } else {
+                // 判断是否lora
+                const match = tag.value.match(common.loraRegex)
+                if (match) {
+                    tag.isLora = true
+                    const loraName = this.loraExists(match[1])
+                    if (loraName !== false) {
+                        tag.loraExists = true
+                        tag.loraName = loraName
+                    }
+                }
+
+                if (!tag.isLora) {
+                    // 判断是否lyco
+                    const match = tag.value.match(common.lycoRegex)
+                    if (match) {
+                        tag.isLyco = true
+                        const lycoName = this.lycoExists(match[1])
+                        if (lycoName !== false) {
+                            tag.lycoExists = true
+                            tag.lycoName = lycoName
+                        }
+                    }
+                }
+
+                if (!tag.isLora && !tag.isLyco) {
+                    // 判断是否embedding
+                    const embeddingName = this.embeddingExists(tag.value)
+                    if (embeddingName !== false) {
+                        tag.isEmbedding = true
+                        tag.value = embeddingName
+                    }
+                }
+            }
+
+            let classes = ['prompt-tag-value']
+            if (tag.isLora) {
+                classes.push('lora-tag')
+                if (!tag.loraExists) {
+                    classes.push('lora-not-exists')
+                }
+            } else if (tag.isLyco) {
+                classes.push('lyco-tag')
+                if (!tag.lycoExists) {
+                    classes.push('lyco-not-exists')
+                }
+            } else if (tag.isEmbedding) {
+                classes.push('embedding-tag')
+            } else if (this.neg) {
+                classes.push('neg-tag')
+            }
+
+            tag.classes = classes
+            return classes
         },
         renderTag(index) {
             let value = this.tags[index].value
@@ -727,26 +859,30 @@ export default {
                 tag.weightNum = 1
                 tag.incWeight = 0
                 tag.decWeight = 0
-                tag.isLora = false
             } else {
                 tag.weightNum = common.getTagWeightNum(tag.value)
                 tag.weightNum = tag.weightNum <= 0 ? 1 : tag.weightNum
                 tag.incWeight = common.getTagIncWeight(tag.value)
                 tag.decWeight = common.getTagDecWeight(tag.value)
-                const bracket = common.hasBrackets(tag.value)
-                tag.isLora = bracket[0] === '<' && bracket[1] === '>'
+                // const bracket = common.hasBrackets(tag.value)
             }
+            this._setTagClass(tag)
             this.$nextTick(() => {
                 this._setTagHeight(tag)
             })
         },
         _setTagHeight(tag) {
-            let $tag = this.$refs['promptTag-' + tag.id][0]
-            let height = $tag.offsetHeight
-            $tag.parentNode.style.height = height + 'px'
-            if (this.$refs['promptTagEdit-' + tag.id]) {
-                this.$refs['promptTagEdit-' + tag.id][0].style.height = height + 'px'
-            }
+            setTimeout(() => {
+                let $tag = this.$refs['promptTagValue-' + tag.id][0]
+                let height = $tag.offsetHeight
+                $tag.parentNode.style.height = height + 'px'
+                if (this.$refs['promptTagEdit-' + tag.id]) {
+                    this.$refs['promptTagEdit-' + tag.id][0].style.height = height + 'px'
+                }
+                if (this.$refs['promptTagDelete-' + tag.id]) {
+                    this.$refs['promptTagDelete-' + tag.id][0].style.height = height + 'px'
+                }
+            }, 300)
         },
         _appendTag(value, localValue = '', disabled = false, index = -1, type = 'text') {
             // 唯一数：当前时间戳+随机数
@@ -820,18 +956,30 @@ export default {
             Sortable.create(this.$refs.promptTagsList, {
                 animation: 150,
                 handle: '.prompt-tag-value',
-                onEnd: ({oldIndex, newIndex}) => {
+                draggable: ".prompt-tag",
+                onEnd: (env) => {
+                    let oldIndex = env.oldDraggableIndex
+                    let newIndex = env.newDraggableIndex
+                    if (oldIndex === newIndex) {
+                        if (env.oldIndex !== env.newIndex) {
+                            // 强制换回去
+                            let oldElement = this.$refs.promptTagsList.children[env.oldIndex]
+                            let newElement = this.$refs.promptTagsList.children[env.newIndex]
+                            common.swapElement(oldElement, newElement)
+                            return
+                        }
+                    }
+
                     const tags = [...this.tags]
                     tags.splice(newIndex, 0, tags.splice(oldIndex, 1)[0])
-                    console.log(tags);
+
                     this.tags = tags
                     this.updateTags()
                     this.$forceUpdate()
                 },
                 onChoose: (env) => {
-                    console.log(env);
                     this.editing = {}
-                    this.dropTag = this.tags[env.oldIndex]
+                    this.dropTag = this.tags[env.oldDraggableIndex]
                 },
                 onUnchoose: (env) => {
                     this.dropTag = null
@@ -943,6 +1091,7 @@ export default {
                     })
                 })*/
             }
+            this._setTextareaFocus()
         },
         onAppendTagBlur(e) {
             setTimeout(() => {
@@ -1046,16 +1195,18 @@ export default {
                             indexes.push(this._appendTag(tag))
                         }
                     })
+                    this.updatePrompt() // 先更新再翻译
                     if (this.autoTranslateToEnglish || this.autoTranslateToLocal) {
                         this.$nextTick(() => {
+                            let useNetwork = !(this.tagCompleteFile && this.onlyCsvOnAuto)
                             if (this.autoTranslateToEnglish) {
                                 // 如果开启了自动翻译到英语，那么就自动翻译
-                                this.translatesToEnglish(indexes).finally(() => {
+                                this.translates(indexes, false, useNetwork).finally(() => {
                                     this.updateTags()
                                 })
                             } else if (this.autoTranslateToLocal) {
                                 // 如果开启了自动翻译到本地语言，那么就自动翻译
-                                this.translatesToLocal(indexes).finally(() => {
+                                this.translates(indexes, true, useNetwork).finally(() => {
                                     this.updateTags()
                                 })
                             }
@@ -1071,6 +1222,7 @@ export default {
         },
         onAppendTagKeyUp(e) {
             if (e.target.value === '' || e.target.value.trim() === '') {
+                e.target.value = ''
                 this.showAppendList = true
 
                 if (e.keyCode === 38 || e.keyCode === 40) {
@@ -1107,7 +1259,6 @@ export default {
             }
         },
         onAppendGroupClick(index, childIndex, e) {
-            console.log(index, childIndex)
             if (index === null) return
             this.appendListSelected = index
             if (childIndex === null) {
@@ -1126,16 +1277,43 @@ export default {
             this.appendListSelected = index
             this.appendListChildSelected = childIndex
         },
+        onTagMouseEnter(index) {
+            if (!this.tags[index]) return false
+            let tag = this.tags[index]
+            tag.isFavorite = this.isFavorite(index)
+        },
+        isFavorite(index) {
+            if (!this.tags[index]) return false
+            let tag = this.tags[index]
+            if (typeof window.phystonPromptfavorites === 'object') {
+                for (const group of window.phystonPromptfavorites) {
+                    if (group.key !== this.favoriteKey) continue
+                    for (const favorite of group.list) {
+                        if (favorite.tags.length !== 1) continue
+                        if (favorite.tags[0].value === tag.value) return favorite.id
+                    }
+                }
+            }
+            return false
+        },
         onTagClick(index) {
-            this.editing = {}
-            this.editing[this.tags[index].id] = true
-            this.$forceUpdate()
-            this.$nextTick(() => {
-                const input = this.$refs['promptTagEdit-' + this.tags[index].id][0]
-                input.focus()
-                input.dispatchEvent(new Event('input'))
-                // input.select()
-            })
+            if (this.tagClickTimeId) clearTimeout(this.tagClickTimeId)
+            this.tagClickTimeId = setTimeout(() => {
+                this.editing = {}
+                this.editing[this.tags[index].id] = true
+                this.$forceUpdate()
+                this.$nextTick(() => {
+                    const input = this.$refs['promptTagEdit-' + this.tags[index].id][0]
+                    input.focus()
+                    input.dispatchEvent(new Event('input'))
+                    // input.select()
+                })
+                clearTimeout(this.tagClickTimeId)
+            }, 250)
+        },
+        onTagDblclick(index) {
+            clearTimeout(this.tagClickTimeId)
+            this.onDisabledTagClick(index)
         },
         onTagInputBlur(index) {
             this.editing[this.tags[index].id] = false
@@ -1206,9 +1384,15 @@ export default {
                 if (bracket[0] === '<' && bracket[1] === '>') {
                     weightNum = 0.1
                 } else {
-                    // 移除权重数
-                    this.tags[index].value = value.replace(common.weightNumRegex, '$1')
-                    if (localValue !== '') this.tags[index].localValue = this.tags[index].localValue.replace(common.weightNumRegex, '$1')
+                    if (this.autoKeepWeightZero) {
+                        // 保留权重数
+                        this.tags[index].value = value.replace(common.weightNumRegex, '$1:0')
+                        if (localValue !== '') this.tags[index].localValue = this.tags[index].localValue.replace(common.weightNumRegex, '$1:0')
+                    } else {
+                        // 移除权重数
+                        this.tags[index].value = value.replace(common.weightNumRegex, '$1')
+                        if (localValue !== '') this.tags[index].localValue = this.tags[index].localValue.replace(common.weightNumRegex, '$1')
+                    }
                 }
             }
             this.tags[index].weightNum = weightNum
@@ -1222,6 +1406,28 @@ export default {
             if (!confirm(this.getLang('delete_all_keywords_confirm'))) return
             this.tags = []
             this.updateTags()
+        },
+        onFavoriteTagClick(index) {
+            if (!this.tags[index]) return
+            let tag = this.tags[index]
+            let favoriteId = this.isFavorite(index)
+            if (!favoriteId) {
+                // 收藏
+                this.gradioAPI.pushFavorite(this.favoriteKey, [tag], tag.value, tag.localValue === '' ? tag.value : tag.localValue).then(res => {
+                    if (res) {
+                        this.tags[index].isFavorite = true
+                        this.$emit('refreshFavorites', this.favoriteKey)
+                    }
+                })
+            } else {
+                // 取消收藏
+                this.gradioAPI.unFavorite(this.favoriteKey, favoriteId).then(res => {
+                    if (res) {
+                        this.tags[index].isFavorite = false
+                        this.$emit('refreshFavorites', this.favoriteKey)
+                    }
+                })
+            }
         },
         onDisabledTagClick(index) {
             this.tags[index].disabled = !this.tags[index].disabled
@@ -1259,144 +1465,63 @@ export default {
             if (localValue !== '') this.tags[index].localValue = localValue
             this.updateTags()
         },
+        onWrapTagClick(index) {
+            let wrapIndex = this._appendTag("\n", "\n", false, -1, 'wrap')
+            let wrapTag = this.tags[wrapIndex]
+            // 移动到当前标签的下面
+            this.tags.splice(wrapIndex, 1);
+            // 然后将 'c' 插入到 'e' 后面
+            this.tags.splice(index + 1, 0, wrapTag);
+            this.updateTags()
+        },
         onTranslateToLocalClick(index) {
-            return new Promise((resolve, reject) => {
-                if (this.languageCode === 'en_US') {
-                    reject('en_US')
-                    return
-                }
-                if (this.loading[this.tags[index].id + '_local']) {
-                    reject('loading')
-                    return
-                }
-                this.loading[this.tags[index].id + '_local'] = true
-                this.translate(this.tags[index].value, 'en_US', this.languageCode).then(res => {
-                    this.loading[this.tags[index].id + '_local'] = false
-                    if (!res.success) {
-                        this.$toastr.error(res.message)
-                        reject(res.message)
-                        return
-                    }
-                    this.tags[index].localValue = res.translated_text
-                    resolve(res.translated_text)
-                }).catch(err => {
-                    console.log(err)
-                    this.$toastr.error(err.message)
-                    this.loading[this.tags[index].id + '_local'] = false
-                    reject(err)
-                })
+            if (this.loading[this.tags[index].id + '_local']) return
+            this.translates([index], true, true).finally(() => {
+                this.updateTags()
             })
         },
         onTranslateToEnglishClick(index) {
-            return new Promise((resolve, reject) => {
-                if (this.languageCode === 'en_US') {
-                    reject('en_US')
-                    return
-                }
-                if (this.loading[this.tags[index].id + '_en']) {
-                    reject('loading')
-                    return
-                }
-                this.loading[this.tags[index].id + '_en'] = true
-                this.translate(this.tags[index].value, this.languageCode, 'en_US').then(res => {
-                    this.loading[this.tags[index].id + '_en'] = false
-                    if (!res.success) {
-                        this.$toastr.error(res.message)
-                        reject(res.message)
-                        return
-                    }
-                    this.tags[index].localValue = this.tags[index].value
-                    this.tags[index].value = res.translated_text
-                    resolve(res.translated_text)
-                }).catch(err => {
-                    console.log(err)
-                    this.$toastr.error(err.message)
-                    this.loading[this.tags[index].id + '_en'] = false
-                    reject(err)
-                }).finally(() => {
-
-                })
+            if (this.loading[this.tags[index].id + '_en']) return
+            this.translates([index], false, true).finally(() => {
+                this.updateTags()
             })
         },
         onTranslatesToLocalClick() {
-            if (this.tags.length === 0) return
-            if (this.loading['all_local']) return
+            if (this.tags.length === 0) return // 没有关键词需要翻译
+            if (this.loading['all_local']) {
+                // 正在翻译中，取消翻译
+                this.cancelMultiTranslate = true
+                this.loading['all_local'] = false
+                return
+            }
             this.loading['all_local'] = true
             let tagIndexes = []
             for (const index in this.tags) {
                 if (this.tags[index].type && this.tags[index].type !== 'text') continue
                 tagIndexes.push(index)
             }
-            this.translatesToLocal(tagIndexes).finally(() => {
+            return this.translates(tagIndexes, true, true).finally(() => {
                 this.loading['all_local'] = false
                 this.updateTags()
             })
         },
-        translatesToLocal(tagIndexes) {
-            return new Promise((resolve, reject) => {
-                if (this.languageCode === 'en_US') {
-                    resolve()
-                    return
-                }
-                let texts = []
-                let textsIndexes = []
-                for (const index of tagIndexes) {
-                    texts.push(this.tags[index].value)
-                    textsIndexes.push(index)
-                    this.loading[this.tags[index].id + '_local'] = true
-                }
-                this.translateMulti(texts, 'en_US', this.languageCode, (res, index) => {
-                    const tagIndex = textsIndexes[index]
-                    this.loading[this.tags[tagIndex].id + '_local'] = false
-                    if (!res.success) {
-                        this.$toastr.error(res.message)
-                        return
-                    }
-                    this.tags[tagIndex].localValue = res.translated_text
-                }, () => {
-                    resolve()
-                })
-            })
-        },
         onTranslatesToEnglishClick() {
-            if (this.tags.length === 0) return
-            if (this.loading['all_en']) return
+            if (this.tags.length === 0) return // 没有关键词需要翻译
+            if (this.loading['all_en']) {
+                // 正在翻译中，取消翻译
+                this.cancelMultiTranslate = true
+                this.loading['all_en'] = false
+                return
+            }
             this.loading['all_en'] = true
             let tagIndexes = []
             for (const index in this.tags) {
                 if (this.tags[index].type && this.tags[index].type !== 'text') continue
                 tagIndexes.push(index)
             }
-            this.translatesToEnglish(tagIndexes).finally(() => {
+            this.translates(tagIndexes, false, true).finally(() => {
                 this.loading['all_en'] = false
                 this.updateTags()
-            })
-        },
-        translatesToEnglish(tagIndexes) {
-            return new Promise((resolve, reject) => {
-                if (this.languageCode === 'en_US') {
-                    resolve()
-                    return
-                }
-                let texts = []
-                let textsIndexes = []
-                for (const index of tagIndexes) {
-                    texts.push(this.tags[index].value)
-                    textsIndexes.push(index)
-                    this.loading[this.tags[index].id + '_en'] = true
-                }
-                this.translateMulti(texts, this.languageCode, 'en_US', (res, index) => {
-                    const tagIndex = textsIndexes[index]
-                    this.loading[this.tags[tagIndex].id + '_en'] = false
-                    if (!res.success) {
-                        this.$toastr.error(res.message)
-                        return
-                    }
-                    this.tags[tagIndex].localValue = this.tags[tagIndex].value
-                    this.tags[tagIndex].value = res.translated_text
-                }, () => {
-                    resolve()
-                })
             })
         },
         useHistory(history) {
@@ -1411,9 +1536,283 @@ export default {
         },
         onPromptMainClick() {
             this.onTextareaChange(true)
+            this._setTextareaFocus()
         },
         onUnfoldClick() {
+            if (this.hidePanel) {
+                this.$nextTick(() => {
+                    this.onResize()
+                })
+            }
             this.$emit("update:hidePanel", !this.hidePanel)
+        },
+        _setTagById(id, value = null, localValue = null) {
+            let tag = this.tags.find(tag => tag.id === id)
+            if (!tag) return false
+            if (value !== null) tag.value = value
+            if (localValue !== null) tag.localValue = localValue
+            return tag
+        },
+        translates(indexes, toLocal = false, useNetwork = true) {
+            return new Promise((resolve, reject) => {
+                if (this.languageCode === 'en_US' || this.languageCode === 'en_GB') {
+                    // 本地语言是英文，不需要翻译
+                    resolve()
+                    return
+                }
+
+                let needTranslateTags = []
+
+                let setLoadings = (tags, loading) => {
+                    tags.forEach((tag) => {
+                        setLoading(tag, loading)
+                    })
+                }
+
+                let setLoading = (tag, loading) => {
+                    if (tag.toLocal) {
+                        this.loading[tag.id + '_local'] = loading
+                    } else {
+                        this.loading[tag.id + '_en'] = loading
+                    }
+                }
+
+                let setTag = (tag, translateText) => {
+                    if (tag.toLocal) {
+                        tag.localValue = translateText
+                    } else {
+                        tag.localValue = tag.value
+                        tag.value = translateText
+                    }
+                    this._setTagById(tag.id, tag.value, tag.localValue)
+                }
+
+                let getTranslateText = (tag) => {
+                    if (tag.isLora && tag.loraExists) {
+                        return this.getExtraNetworkFullName(tag.loraName, 'lora')
+                    } else if (tag.isLyco && tag.lycoExists) {
+                        return this.getExtraNetworkFullName(tag.lycoName, 'lycoris')
+                    } else if (tag.isEmbedding) {
+                        return this.getExtraNetworkFullName(tag.value, 'textual inversion')
+                    }
+                    return tag.value
+                }
+
+                // 先过滤掉不需要翻译的标签
+                indexes.forEach(index => {
+                    let tag = this.tags[index]
+                    let translateText = getTranslateText(tag)
+                    if (translateText !== tag.value) {
+                        tag.localValue = translateText
+                        return
+                    }
+                    if (!common.canTranslate(tag.value)) {
+                        // 不需要翻译
+                        return
+                    }
+                    tag.isEnglish = common.isEnglishByLangCode(tag.value, this.languageCode)
+                    if (tag.isEnglish === -1) {
+                        // 无法检测
+                        if (toLocal) {
+                            // 翻译到本地语言
+                            tag.toLocal = true
+                        } else {
+                            // 翻译到英文
+                            tag.toLocal = false
+                        }
+                    } else if (tag.isEnglish === 0) {
+                        // 不是英文
+                        if (toLocal) {
+                            // 翻译到本地语言
+                            // 不是英文，那么 tag.value 就是本地语言
+                            if (tag.localValue === '') {
+                                // 如果 localValue 为空，那么需要把 value 翻译到英文
+                                tag.localValue = tag.value
+                                tag.toLocal = false
+                            } else {
+                                // 如果 localValue 不为空，那么先把它们交换一下
+                                const value = tag.value
+                                tag.value = tag.localValue
+                                tag.localValue = value
+                            }
+                        } else {
+                            // 翻译到英文
+                            tag.toLocal = false
+                        }
+                    } else {
+                        // 是英文
+                        tag.toLocal = true
+                    }
+                    setLoading(tag, true)
+                    needTranslateTags.push(tag)
+                })
+
+                const translate = (tags) => {
+                    if (tags.length <= 0) {
+                        setLoadings(tags, false)
+                        resolve()
+                        return
+                    }
+                    if (this.translateApi === 'openai') {
+                        // 使用openai翻译，先把所有需要翻译的文本改为JSON数组格式，然后一次性请求，完成后在解析数组
+                        let request = []
+                        tags.forEach((tag, index) => {
+                            request.push({"text": tag.value, "index": index})
+                        })
+                        let fromLang = toLocal ? 'en_US' : this.languageCode
+                        let toLang = toLocal ? this.languageCode : 'en_US'
+                        this.gradioAPI.translate(JSON.stringify(request), fromLang, toLang, this.translateApi, this.translateApiConfig).then(res => {
+                            if (res.success) {
+                                let translated_text = res.translated_text
+                                const start = translated_text.indexOf('[')
+                                const end = translated_text.lastIndexOf(']')
+                                translated_text = translated_text.substring(start, end + 1)
+                                try {
+                                    translated_text = JSON.parse(translated_text)
+                                    for (const index in translated_text) {
+                                        const item = translated_text[index]
+                                        let tag = tags[item.index]
+                                        item.text = item.text.replace(/\.+$/, '')
+                                        item.text = item.text.trim()
+                                        setTag(tag, item.text)
+                                    }
+                                    setLoadings(tags, false)
+                                    resolve()
+                                } catch (e) {
+                                    // 有一个错误，就代表整体都错了
+                                    setLoadings(tags, false)
+                                    this.$toastr.error(e.message)
+                                    reject(e.message)
+                                }
+                            } else {
+                                // 有一个错误，就代表整体都错了
+                                setLoadings(tags, false)
+                                this.$toastr.error(res.message)
+                                reject(res.message)
+                            }
+                        }).catch(error => {
+                            // 有一个错误，就代表整体都错了
+                            setLoadings(tags, false)
+                            this.$toastr.error(error.message)
+                            reject(error.message)
+                        })
+                    } else {
+                        const concurrent = this.translateApiConfig.concurrent || 1 // 并发数
+                        let tagsCount = tags.length // 需要翻译的标签数
+                        let groupCount = Math.ceil(tagsCount / concurrent) // 分组数
+                        const trans = (groupNow = 0) => {
+                            if (this.cancelMultiTranslate) {
+                                // 如果取消了翻译，跳过
+                                setLoadings(tags, false)
+                                resolve()
+                                return
+                            }
+                            if (groupNow >= groupCount) {
+                                // 全部完成
+                                setLoadings(tags, false)
+                                resolve()
+                                return
+                            }
+                            const groupTags = tags.slice(groupNow * concurrent, (groupNow + 1) * concurrent)
+                            let completeCount = groupTags.length
+                            const completeFunc = () => {
+                                completeCount--
+                                if (completeCount === 0) {
+                                    // 本组全部完成
+                                    setTimeout(() => {
+                                        trans(groupNow + 1)
+                                    }, 200)
+                                }
+                            }
+                            groupTags.forEach((tag, index) => {
+                                if (this.cancelMultiTranslate) {
+                                    // 如果取消了翻译，跳过
+                                    setLoading(tag, false)
+                                    completeFunc()
+                                } else {
+                                    let fromLang = tag.toLocal ? 'en_US' : this.languageCode
+                                    let toLang = tag.toLocal ? this.languageCode : 'en_US'
+                                    this.gradioAPI.translate(tag.value, fromLang, toLang, this.translateApi, this.translateApiConfig).then(res => {
+                                        if (res.success) {
+                                            res.translated_text = res.translated_text.replace(/\.+$/, '')
+                                            res.translated_text = res.translated_text.trim()
+                                            setTag(tag, res.translated_text)
+                                        } else {
+                                            this.$toastr.error(res.message)
+                                        }
+                                        setLoading(tag, false)
+                                        completeFunc()
+                                    }).catch(error => {
+                                        // 有一个错误，其它的也不继续了
+                                        setLoadings(tags, false)
+                                        this.$toastr.error(error.message)
+                                        reject(error.message)
+                                    })
+                                }
+                            })
+                        }
+                        trans(0)
+                    }
+                }
+
+                if (this.tagCompleteFile) {
+                    // 开启了使用tagcomplete翻译
+                    let promises = []
+                    needTranslateTags.forEach(tag => {
+                        // 是否被括号包裹
+                        const splitTag = common.splitTag(tag.value)
+                        if (splitTag.value !== tag.value) {
+                            tag.value = splitTag.value
+                            tag.splits = splitTag
+                        }
+                        if (tag.toLocal) {
+                            // 翻译到本地语言
+                            promises.push(this.translateToLocalByCSV(tag.value))
+                        } else {
+                            // 翻译到英文
+                            promises.push(this.translateToEnByCSV(tag.value))
+                        }
+                    })
+                    Promise.all(promises).then(results => {
+                        let needs = []
+                        results.forEach((result, index) => {
+                            let tag = needTranslateTags[index]
+                            if (tag.splits) {
+                                // 如果被括号包裹，还原
+                                tag.value = tag.splits.left + tag.value + tag.splits.right
+                            }
+
+                            if (result === '') {
+                                needs.push(tag)
+                            } else {
+                                if (tag.splits) {
+                                    result = tag.splits.left + result + tag.splits.right
+                                }
+                                setLoading(tag, false)
+                                setTag(tag, result)
+                            }
+                        })
+                        if (useNetwork) {
+                            translate(needs)
+                        } else {
+                            setLoadings(needs, false)
+                            resolve()
+                        }
+                    }).catch(error => {
+                        // 有一个错误，就不翻译了
+                        setLoadings(needTranslateTags, false)
+                        this.$toastr.error(error)
+                        reject(error)
+                    })
+                } else {
+                    if (useNetwork) {
+                        translate(needTranslateTags)
+                    } else {
+                        setLoadings(needTranslateTags, false)
+                        resolve()
+                    }
+                }
+            })
         }
     },
 }

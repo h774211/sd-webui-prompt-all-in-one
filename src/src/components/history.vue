@@ -39,6 +39,9 @@
                             </div>
                         </div>
                         <div class="item-header-right">
+                            <div class="header-btn-favorite hover-scale-140" @click="onDeleteClick(index)">
+                                <icon-svg name="remove"/>
+                            </div>
                             <div class="header-btn-favorite hover-scale-140" @click="onFavoriteClick(index)"
                                  v-show="item.is_favorite" v-tooltip="getLang('remove_from_favorite')">
                                 <icon-svg name="favorite-yes"/>
@@ -113,7 +116,7 @@ export default {
             currentItem: {}
         }
     },
-    emits: ['use'],
+    emits: ['use', 'refreshFavorites'],
     mounted() {
     },
     methods: {
@@ -149,8 +152,8 @@ export default {
 
             this.loading = true
             this.isShow = true
-            this.$refs.history.style.top = (e.clientY + 2) + 'px'
-            this.$refs.history.style.left = (e.clientX + 2) + 'px'
+            this.$refs.history.style.top = (e.pageY + 2) + 'px'
+            this.$refs.history.style.left = (e.pageX + 2) + 'px'
 
             this.getHistories(this.historyKey)
 
@@ -174,6 +177,16 @@ export default {
             this.historyKey = key
             this.getHistories(this.historyKey)
         },
+        onDeleteClick(index) {
+            let group = this.histories.find(item => item.key === this.historyKey)
+            if (!group) return
+            let history = group.list[index]
+            this.gradioAPI.deleteHistory(this.historyKey, history.id).then(res => {
+                if (res) {
+                    group.list.splice(index, 1)
+                }
+            })
+        },
         onFavoriteClick(index) {
             let group = this.histories.find(item => item.key === this.historyKey)
             if (!group) return
@@ -182,12 +195,14 @@ export default {
                 this.gradioAPI.doFavorite(this.historyKey, history.id).then(res => {
                     if (res) {
                         history.is_favorite = true
+                        this.$emit('refreshFavorites', this.historyKey)
                     }
                 })
             } else {
                 this.gradioAPI.unFavorite(this.historyKey, history.id).then(res => {
                     if (res) {
                         history.is_favorite = false
+                        this.$emit('refreshFavorites', this.historyKey)
                     }
                 })
             }
@@ -216,6 +231,7 @@ export default {
             this.gradioAPI.setHistoryName(this.historyKey, history.id, value).then(res => {
                 if (res) {
                     history.name = value
+                    this.$emit('refreshFavorites', this.historyKey)
                 } else {
                     e.target.value = history.name
                 }

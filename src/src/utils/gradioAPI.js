@@ -86,6 +86,10 @@ export default class GradioAPI {
         return (await this.api.post("/push_history", {type, tags, prompt, name})).data.success
     }
 
+    async pushFavorite(type, tags, prompt, name = '') {
+        return (await this.api.post("/push_favorite", {type, tags, prompt, name})).data.success
+    }
+
     async getLatestHistory(type) {
         return (await this.api.get("/get_latest_history", {params: {type}})).data.history
     }
@@ -141,5 +145,9 @@ export default class GradioAPI {
 
     async getExtensionCssList() {
         return (await this.api.get("/get_extension_css_list")).data.css_list
+    }
+
+    async getExtraNetworks() {
+        return (await this.api.get("/get_extra_networks")).data.extra_networks
     }
 }

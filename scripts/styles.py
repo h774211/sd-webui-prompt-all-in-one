@@ -32,8 +32,12 @@ def getExtensionCssList():
             continue
 
         manifest = None
-        with open(manifest_path, 'r') as f:
-            manifest = f.read()
+        try:
+            with open(manifest_path, 'r', encoding='utf8', errors='ignore') as f:
+                manifest = f.read()
+        except Exception as e:
+            print(f'读取 {manifest_path} 失败：{e}')
+            pass
         if not manifest:
             continue
 

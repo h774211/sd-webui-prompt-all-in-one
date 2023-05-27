@@ -8,10 +8,15 @@
                             :history-key="item.historyKey"
                             @click:show-history="onShowHistory(item.id, $event)"
                             :favorite-key="item.favoriteKey"
+                            @refresh-favorites="onRefreshFavorites"
                             @click:show-favorite="onShowFavorite(item.id, $event)"
+                            v-model:can-one-translate="canOneTranslate"
+                            v-model:auto-translate="autoTranslate"
                             v-model:auto-translate-to-english="autoTranslateToEnglish"
                             v-model:auto-translate-to-local="autoTranslateToLocal"
                             v-model:auto-remove-space="autoRemoveSpace"
+                            v-model:auto-remove-last-comma="autoRemoveLastComma"
+                            v-model:auto-keep-weight-zero="autoKeepWeightZero"
                             :hide-default-input="item.hideDefaultInput"
                             @update:hide-default-input="onUpdateHideDefaultInput(item.id, $event)"
                             :hide-panel="item.hidePanel"
@@ -20,26 +25,46 @@
                             v-model:translate-api="translateApi"
                             :translate-api-config="translateApiConfig"
                             @click:translate-api="onTranslateApiClick"
+                            @click:prompt-format="onPromptFormatClick"
                             v-model:tag-complete-file="tagCompleteFile"
+                            v-model:only-csv-on-auto="onlyCsvOnAuto"
                             @click:select-language="onSelectLanguageClick"
-                            @click:select-theme="onSelectThemeClick"></physton-prompt>
+                            @click:select-theme="onSelectThemeClick"
+                            :extra-networks="extraNetworks"
+                            :loras="loras"
+                            :lycos="lycos"
+                            :embeddings="embeddings"
+            ></physton-prompt>
         </template>
         <translate-setting ref="translateSetting" v-model:language-code="languageCode"
                            :translate-apis="translateApis" :languages="languages"
                            @forceUpdate:translateApi="updateTranslateApiConfig"
                            v-model:tag-complete-file="tagCompleteFile"
+                           v-model:only-csv-on-auto="onlyCsvOnAuto"
                            v-model:translate-api="translateApi"></translate-setting>
         <select-language ref="selectLanguage" v-model:language-code="languageCode"
                          :translate-apis="translateApis"
                          :languages="languages"
                          v-model:translate-api="translateApi"
-                         v-model:tag-complete-file="tagCompleteFile"></select-language>
+                         v-model:tag-complete-file="tagCompleteFile"
+                         v-model:only-csv-on-auto="onlyCsvOnAuto"></select-language>
+        <prompt-format ref="promptFormat" v-model:language-code="languageCode"
+                       :translate-apis="translateApis"
+                       :languages="languages"
+                       v-model:auto-remove-space="autoRemoveSpace"
+                       v-model:auto-remove-last-comma="autoRemoveLastComma"
+                       v-model:auto-keep-weight-zero="autoKeepWeightZero"></prompt-format>
         <history ref="history" v-model:language-code="languageCode"
                  :translate-apis="translateApis" :languages="languages"
-                 v-model:tag-complete-file="tagCompleteFile" @use="onUseHistory"/>
+                 v-model:tag-complete-file="tagCompleteFile"
+                 v-model:only-csv-on-auto="onlyCsvOnAuto"
+                 @refresh-favorites="onRefreshFavorites"
+                 @use="onUseHistory"/>
         <favorite ref="favorite" v-model:language-code="languageCode"
                   :translate-apis="translateApis" :languages="languages"
-                  v-model:tag-complete-file="tagCompleteFile" @use="onUseFavorite"></favorite>
+                  v-model:tag-complete-file="tagCompleteFile"
+                  v-model:only-csv-on-auto="onlyCsvOnAuto"
+                  @use="onUseFavorite"></favorite>
         <extension-css ref="extensionCss" v-model:language-code="languageCode"
                        :translate-apis="translateApis" :languages="languages"/>
 
@@ -50,7 +75,8 @@
                 </div>
                 <div class="paste-popup-title">{{ pasteTitle }}</div>
                 <div class="paste-popup-body">
-                    <textarea class="paste-content" v-model="pasteContent" :placeholder="getLang('please_enter_the_content_here')"></textarea>
+                    <textarea class="paste-content" v-model="pasteContent"
+                              :placeholder="getLang('please_enter_the_content_here')"></textarea>
                     <div v-if="!pasteLoading" class="paste-submit" @click="onClickPasteSubmit">Submit</div>
                     <div v-else class="paste-submit">
                         <icon-svg name="loading"/>
@@ -70,10 +96,12 @@ import Favorite from "@/components/favorite.vue";
 import History from "@/components/history.vue";
 import IconSvg from "@/components/iconSvg.vue";
 import ExtensionCss from "@/components/extensionCss.vue";
+import PromptFormat from "@/components/promptFormat.vue";
 
 export default {
     name: 'App',
     components: {
+        PromptFormat,
         ExtensionCss,
         IconSvg,
         History,
@@ -168,12 +196,17 @@ export default {
             translateApis: [],
             translateApi: '',
             translateApiConfig: {},
+            canOneTranslate: false,
+            autoTranslate: false,
             autoTranslateToEnglish: false,
             autoTranslateToLocal: false,
             autoRemoveSpace: true,
+            autoRemoveLastComma: false,
+            autoKeepWeightZero: false,
             // hideDefaultInput: false,
             enableTooltip: true,
             tagCompleteFile: '',
+            onlyCsvOnAuto: false,
 
             startWatchSave: false,
 
@@ -185,6 +218,11 @@ export default {
 
             historyCurrentPrompt: '',
             favoriteCurrentPrompt: '',
+
+            extraNetworks: [],
+            loras: [],
+            lycos: [],
+            embeddings: [],
         }
     },
     watch: {
@@ -192,6 +230,7 @@ export default {
             handler: function (val, oldVal) {
                 if (!this.startWatchSave) return
                 console.log('onLanguageCodeChange', val)
+                this.canOneTranslate = common.canOneTranslate(this.languageCode)
                 this.gradioAPI.setData('languageCode', val).then(data => {
                 }).catch(err => {
                 })
@@ -218,11 +257,45 @@ export default {
             },
             immediate: false,
         },
+        autoTranslate: {
+            handler: function (val, oldVal) {
+                if (!this.startWatchSave) return
+                if (this.autoTranslate) {
+                    this.autoTranslateToEnglish = true
+                    this.autoTranslateToLocal = true
+                }
+                console.log('onAutoTranslateChange', val)
+                this.gradioAPI.setData('autoTranslate', val).then(data => {
+                }).catch(err => {
+                })
+            },
+            immediate: false,
+        },
         autoRemoveSpace: {
             handler: function (val, oldVal) {
                 if (!this.startWatchSave) return
                 console.log('onAutoRemoveSpaceChange', val)
                 this.gradioAPI.setData('autoRemoveSpace', val).then(data => {
+                }).catch(err => {
+                })
+            },
+            immediate: false,
+        },
+        autoRemoveLastComma: {
+            handler: function (val, oldVal) {
+                if (!this.startWatchSave) return
+                console.log('onAutoRemoveLastCommaChange', val)
+                this.gradioAPI.setData('autoRemoveLastComma', val).then(data => {
+                }).catch(err => {
+                })
+            },
+            immediate: false,
+        },
+        autoKeepWeightZero: {
+            handler: function (val, oldVal) {
+                if (!this.startWatchSave) return
+                console.log('onAutoKeepWeightZeroChange', val)
+                this.gradioAPI.setData('autoKeepWeightZero', val).then(data => {
                 }).catch(err => {
                 })
             },
@@ -273,9 +346,23 @@ export default {
             },
             immediate: false,
         },
+        onlyCsvOnAuto() {
+            if (!this.startWatchSave) return
+            console.log('onOnlyCsvOnAutoChange', this.onlyCsvOnAuto)
+            this.gradioAPI.setData('onlyCsvOnAuto', this.onlyCsvOnAuto).then(data => {
+            }).catch(err => {
+            })
+        },
     },
     mounted() {
         common.loadCSS('main.min.css', 'physton-prompt-main', true)
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const theme = urlParams.get("__theme")
+        if (!document.body.classList.contains(theme)) {
+            document.body.classList.add(theme);
+        }
+
         this.gradioAPI.getConfig().then(res => {
             console.log('config:', res)
             this.languageCode = res.i18n.default
@@ -297,7 +384,8 @@ export default {
             return common.getLang(key, this.languageCode, this.languages)
         },
         init() {
-            let dataListsKeys = ['languageCode', 'autoTranslateToEnglish', 'autoTranslateToLocal', 'autoRemoveSpace', /*'hideDefaultInput', */'translateApi', 'enableTooltip', 'tagCompleteFile']
+            this.loadExtraNetworks()
+            let dataListsKeys = ['languageCode', 'autoTranslate', 'autoTranslateToEnglish', 'autoTranslateToLocal', 'autoRemoveSpace', 'autoRemoveLastComma', 'autoKeepWeightZero', /*'hideDefaultInput', */'translateApi', 'enableTooltip', 'tagCompleteFile', 'onlyCsvOnAuto']
             this.prompts.forEach(item => {
                 dataListsKeys.push(item.hideDefaultInputKey)
                 dataListsKeys.push(item.hidePanelKey)
@@ -317,14 +405,36 @@ export default {
                         this.$forceUpdate()
                     }
                 }
+                this.canOneTranslate = common.canOneTranslate(this.languageCode)
                 if (data.autoTranslateToEnglish !== null) {
                     this.autoTranslateToEnglish = data.autoTranslateToEnglish
                 }
                 if (data.autoTranslateToLocal !== null) {
                     this.autoTranslateToLocal = data.autoTranslateToLocal
                 }
+                if (data.autoTranslate !== null) {
+                    this.autoTranslate = data.autoTranslate
+                    if (this.autoTranslate) {
+                        this.autoTranslateToEnglish = true
+                        this.autoTranslateToLocal = true
+                    }
+                } else {
+                    if (this.canOneTranslate) {
+                        this.autoTranslate = this.autoTranslateToEnglish || this.autoTranslateToLocal
+                        this.autoTranslateToEnglish = true
+                        this.autoTranslateToLocal = true
+                    } else {
+                        this.autoTranslate = false
+                    }
+                }
                 if (data.autoRemoveSpace !== null) {
                     this.autoRemoveSpace = data.autoRemoveSpace
+                }
+                if (data.autoRemoveLastComma !== null) {
+                    this.autoRemoveLastComma = data.autoRemoveLastComma
+                }
+                if (data.autoKeepWeightZero !== null) {
+                    this.autoKeepWeightZero = data.autoKeepWeightZero
                 }
                 /*if (data.hideDefaultInput !== null) {
                     this.hideDefaultInput = data.hideDefaultInput
@@ -343,14 +453,17 @@ export default {
                         this.$refs.translateSetting.getCSV(this.tagCompleteFile)
                     })
                 } else {
-                    if (typeof TAC_CFG === 'object' && typeof QUEUE_FILE_LOAD === 'object') {
+                    /*if (typeof TAC_CFG === 'object' && typeof QUEUE_FILE_LOAD === 'object') {
                         QUEUE_FILE_LOAD.push(() => {
                             if (typeof TAC_CFG.translation !== 'object' || typeof TAC_CFG.translation.translationFile !== 'string') return
                             if (!TAC_CFG.translation.translationFile) return
                             this.tagCompleteFile = '\\extensions\\a1111-sd-webui-tagcomplete\\tags\\' + TAC_CFG.translation.translationFile
                             this.$refs.translateSetting.getCSV(this.tagCompleteFile)
                         })
-                    }
+                    }*/
+                }
+                if (data.onlyCsvOnAuto !== null) {
+                    this.onlyCsvOnAuto = data.onlyCsvOnAuto
                 }
 
                 this.updateTranslateApiConfig()
@@ -381,6 +494,7 @@ export default {
                 this.handlePaste()
 
                 // todo: test
+                // this.$refs.promptFormat.open()
                 // this.$refs.translateSetting.open(this.translateApi)
                 /*this.onShowFavorite('phystonPrompt_txt2img_prompt', {
                     clientY: 150,
@@ -401,7 +515,7 @@ export default {
             this.gradioAPI.getData('translate_api.' + this.translateApi).then(res => {
                 let config = {}
                 const apiItem = common.getTranslateApiItem(this.translateApis, this.translateApi)
-                if (apiItem) {
+                if (apiItem.config) {
                     for (const item of apiItem.config) {
                         if (res) {
                             config[item.key] = res[item.key]
@@ -413,6 +527,9 @@ export default {
                 }
                 this.translateApiConfig = config
             })
+        },
+        onPromptFormatClick(e) {
+            this.$refs.promptFormat.open(e)
         },
         onSelectLanguageClick(e) {
             this.$refs.selectLanguage.open(e)
@@ -431,10 +548,11 @@ export default {
                 // 拷贝一个新的按钮
                 const $pasteNew = $paste.cloneNode(true)
                 $pasteNew.id = 'paste-new-' + index
+                $pasteNew.innerHTML = '🗒'
                 // 加到原来的按钮后面一个
                 $paste.parentNode.insertBefore($pasteNew, $paste.nextSibling)
                 // 原来的按钮隐藏
-                $paste.style.display = 'none'
+                // $paste.style.display = 'none'
                 // 监听新按钮点击事件
                 $pasteNew.addEventListener('click', () => {
                     this.pasteBtn = $paste
@@ -543,6 +661,9 @@ export default {
             const item = this.prompts.find(item => item.id == this.favoriteCurrentPrompt)
             if (!item) return
             this.$refs[item.id][0].useFavorite(favorite)
+        },
+        onRefreshFavorites(key) {
+            this.$refs.favorite.getFavorites(key)
         },
     },
 }
